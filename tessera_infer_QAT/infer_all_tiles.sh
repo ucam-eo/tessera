@@ -8,28 +8,29 @@
 
 ############### This needs to be modified to your environment ###############
 # Main directory where preprocessed tiles and outputs are located
-BASE_DATA_DIR="/absolute_path_to_data_dir"
+: "${BASE_DATA_DIR:=/absolute_path_to_data_dir}"
 
 # Python environment with required dependencies
-export PYTHON_ENV="/absolute_path_to_python_env/bin/python"
+: "${PYTHON_ENV:=/absolute_path_to_python_env/bin/python}"
+export PYTHON_ENV
 
 # CPU:GPU split ratio (Format: CPU:GPU)
 # Examples: "1:1" (balanced), "1:0" (CPU only), "0:1" (GPU only)
-CPU_GPU_SPLIT="1:0"
+: "${CPU_GPU_SPLIT:=0:1}"
 
 # Max concurrent tile processes for CPU/GPU
-MAX_CONCURRENT_PROCESSES_CPU=20
-MAX_CONCURRENT_PROCESSES_GPU=1
+: "${MAX_CONCURRENT_PROCESSES_CPU:=20}"
+: "${MAX_CONCURRENT_PROCESSES_GPU:=1}"
 
 # CPU cores to use
 TOTAL_CPU_CORES=$(nproc)
 AVAILABLE_CORES=$((TOTAL_CPU_CORES / 2))
 
 # Batch and worker settings
-CPU_BATCH_SIZE=1024
-CPU_NUM_WORKERS=0
-GPU_BATCH_SIZE=1024
-GPU_NUM_WORKERS=4
+: "${CPU_BATCH_SIZE:=1024}"
+: "${CPU_NUM_WORKERS:=0}"
+: "${GPU_BATCH_SIZE:=512}"
+: "${GPU_NUM_WORKERS:=4}"
 
 # Precision and AMX behavior
 CPU_ENABLE_BF16=false

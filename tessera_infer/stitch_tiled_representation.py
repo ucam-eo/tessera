@@ -133,6 +133,11 @@ def stitch_and_crop_representations(d_pixel_retiled_path, representation_retiled
         
         rep_data = np.load(rep_path)
         
+        scale_path = rep_path.replace('.npy', '_scales.npy')
+        if os.path.exists(scale_path):
+            scales = np.load(scale_path)  # (H, W) per-pixel scale factors
+            rep_data = rep_data.astype(np.float32) * scales[:, :, np.newaxis]
+        
         # Calculate ROI window in downstream TIFF
         # First determine pixel coordinates of ROI bounds in downstream TIFF
         window = rasterio.windows.from_bounds(
