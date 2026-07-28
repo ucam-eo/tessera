@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-import os
-import fiona
-import rasterio
 import logging
+import os
+import sys
+
+import fiona
 import numpy as np
+import rasterio
+from pyproj import Transformer
+from rasterio.crs import CRS
 from rasterio.features import rasterize
 from rasterio.transform import from_origin
-from rasterio.crs import CRS
-from shapely.geometry import shape, mapping
-from shapely.ops import transform as shp_transform, unary_union
-from pyproj import Transformer
+from shapely.geometry import mapping, shape
+from shapely.ops import transform as shp_transform
+from shapely.ops import unary_union
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 def determine_utm_zone(lon, lat):
     """
@@ -50,6 +56,7 @@ def determine_utm_zone(lon, lat):
     epsg_code = 32600 + zone_number if is_northern else 32700 + zone_number
 
     return epsg_code, zone_number, is_northern
+
 
 def determine_best_utm_crs(geometries, src_crs):
     """
@@ -90,6 +97,7 @@ def determine_best_utm_crs(geometries, src_crs):
 
     return CRS.from_epsg(epsg_code)
 
+
 def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
     """
     Convert a shapefile to a TIFF raster.
@@ -105,14 +113,14 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
     """
     # Set default output path if not provided
     if tiff_path is None:
-        tiff_path = os.path.splitext(shp_path)[0] + '.tiff'
+        tiff_path = os.path.splitext(shp_path)[0] + ".tiff"
 
     logger.info(f"Starting conversion of shapefile: {shp_path}")
     logger.info(f"Output TIFF will be saved as: {tiff_path}")
     logger.info(f"Using pixel size: {pixel_size} meters")
 
     # Open the shapefile and read geometries
-    with fiona.open(shp_path, 'r') as src:
+    with fiona.open(shp_path, "r") as src:
         # Get basic shapefile information
         num_features = len(src)
         src_driver = src.driver
@@ -124,7 +132,7 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
         logger.info(f"  - Schema: {src_schema}")
 
         # Read all geometries
-        geometries = [feature['geometry'] for feature in src]
+        geometries = [feature["geometry"] for feature in src]
         logger.info(f"Read {len(geometries)} geometries from the shapefile")
 
         # Get source CRS, default to EPSG:4326 if undefined
@@ -149,7 +157,9 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
 
     # Reproject geometries to the target CRS
     try:
-        reprojected_geoms = [mapping(shp_transform(transformer, shape(geom))) for geom in geometries]
+        reprojected_geoms = [
+            mapping(shp_transform(transformer, shape(geom))) for geom in geometries
+        ]
         logger.info(f"Successfully reprojected {len(reprojected_geoms)} geometries")
     except Exception as e:
         logger.error(f"Error reprojecting geometries: {str(e)}")
@@ -192,7 +202,7 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
             transform=transform_affine,
             fill=0,
             default_value=255,
-            dtype='uint8'
+            dtype="uint8",
         )
         logger.info(f"Rasterization complete. Raster shape: {raster.shape}")
     except Exception as e:
@@ -204,8 +214,8 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
     try:
         with rasterio.open(
             tiff_path,
-            'w',
-            driver='GTiff',
+            "w",
+            driver="GTiff",
             height=height,
             width=width,
             count=1,
@@ -220,7 +230,7 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
         raise
 
     # Create convex hull TIFF
-    hull_tiff_path = os.path.splitext(tiff_path)[0] + '_convex_hull.tiff'
+    hull_tiff_path = os.path.splitext(tiff_path)[0] + "_convex_hull.tiff"
     logger.info(f"Creating convex hull TIFF: {hull_tiff_path}")
 
     try:
@@ -233,14 +243,14 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
             out_shape=(height, width),
             transform=transform_affine,
             fill=0,
-            dtype='uint8'
+            dtype="uint8",
         )
 
         # Write the convex hull to TIFF
         with rasterio.open(
             hull_tiff_path,
-            'w',
-            driver='GTiff',
+            "w",
+            driver="GTiff",
             height=height,
             width=width,
             count=1,
@@ -256,12 +266,17 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
 
     return tiff_path, hull_tiff_path
 
+
 def main():
     """
     Main function to run the conversion process.
     """
     # Input shapefile path
-    shp_path = 'absolute_path_to_your_shp_file'
+    if len(sys.argv) < 2:
+        # uv run ./convert_shp_to_tiff.py /path/to/shapefile.shp
+        print("Usage: python ./convert_shp_to_tiff.py /path/to/shapefile.shp")
+        sys.exit(1)
+    shp_path = sys.argv[1]
 
     # Call the conversion function
     try:
@@ -272,6 +287,7 @@ def main():
     except Exception as e:
         logger.error(f"Conversion failed: {str(e)}")
         raise
+
 
 if __name__ == "__main__":
     main()

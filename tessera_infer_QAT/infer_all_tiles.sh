@@ -8,18 +8,21 @@
 
 ############### This needs to be modified to your environment ###############
 # Main directory where preprocessed tiles and outputs are located
-BASE_DATA_DIR="/absolute_path_to_data_dir"
+ : "${BASE_DATA_DIR:=/absolute_path_to_data_dir}"
 
 # Python environment with required dependencies
-export PYTHON_ENV="/absolute_path_to_python_env/bin/python"
+ : "${PYTHON_ENV:=/absolute/path/to/your/python_env/bin/python}"
+
+# Base directory for logfiles
+ : "${BASE_LOG_DIR:=.}"
 
 # CPU:GPU split ratio (Format: CPU:GPU)
 # Examples: "1:1" (balanced), "1:0" (CPU only), "0:1" (GPU only)
-CPU_GPU_SPLIT="1:0"
+ : "${CPU_GPU_SPLIT:=1:0}"
 
 # Max concurrent tile processes for CPU/GPU
-MAX_CONCURRENT_PROCESSES_CPU=20
-MAX_CONCURRENT_PROCESSES_GPU=1
+ : "${MAX_CONCURRENT_PROCESSES_CPU:=20}"
+ : "${MAX_CONCURRENT_PROCESSES_GPU:=1}"
 
 # CPU cores to use
 TOTAL_CPU_CORES=$(nproc)
@@ -156,7 +159,7 @@ trap cleanup SIGINT SIGTERM
 log_header "SETUP DIRECTORIES"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "src/tile_lists"
-mkdir -p "logs"
+mkdir -p "${BASE_LOG_DIR}/logs"
 log_success "Created necessary directories"
 
 log_header "SCANNING TILES"
@@ -272,7 +275,7 @@ launch_gpu_processes() {
     log_header "GPU PROCESSING"
     for ((i=0; i<NUM_GPU_PROCESSES; i++)); do
         TILE_LIST="src/tile_lists/tiles_gpu_${i}.json"
-        LOG_FILE="logs/infer_qat_gpu_${i}.log"
+        LOG_FILE="${BASE_LOG_DIR}/logs/infer_qat_gpu_${i}.log"
         VERBOSE_GPU_FLAG=""
         [[ "$VERBOSE_GPU" == "true" ]] && VERBOSE_GPU_FLAG="--verbose_gpu"
         CMD="$PYTHON_ENV $PYTHON_SCRIPT --config $CONFIG_FILE --mode gpu --gpu_id $i --tile_list $TILE_LIST --process_id $i --checkpoint_path $CHECKPOINT_PATH --output_dir $OUTPUT_DIR --batch_size $GPU_BATCH_SIZE --num_workers $GPU_NUM_WORKERS --log_interval $LOG_INTERVAL $GPU_BF16_FLAG $VERBOSE_GPU_FLAG --simplified_logging"
@@ -287,7 +290,7 @@ launch_gpu_processes() {
 start_cpu_process() {
     local tile_path="$1"
     local process_id="$2"
-    local log_file="logs/infer_qat_cpu_${process_id}.log"
+    local log_file="${BASE_LOG_DIR}/logs/infer_qat_cpu_${process_id}.log"
     > "$log_file"
     $PYTHON_ENV "$PYTHON_SCRIPT" \
         --config "$CONFIG_FILE" \
@@ -394,6 +397,6 @@ SCRIPT_END=$(date +%s)
 TOTAL_DURATION=$(calculate_time $SCRIPT_START $SCRIPT_END)
 log_header "COMPLETED IN $TOTAL_DURATION"
 log_info "Detailed logs:"
-log_info "  - CPU logs: logs/infer_qat_cpu_*.log"
-log_info "  - GPU logs: logs/infer_qat_gpu_*.log"
+log_info "  - CPU logs: ${BASE_LOG_DIR}/logs/infer_qat_cpu_*.log"
+log_info "  - GPU logs: ${BASE_LOG_DIR}/logs/infer_qat_gpu_*.log"
 

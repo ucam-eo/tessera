@@ -12,8 +12,7 @@ set -u
 #######################################
 
 # === Basic Configuration ===
-# BASE_DIR="/absolute/path/to/your/data_dir"
-BASE_DIR="/scratch/zf281/tessera/data/cambridge/output/2024"
+ : "${BASE_DIR:=/absolute/path/to/your/data_dir}"
 OUT_DIR="${BASE_DIR}/data_processed"
 DOWNSAMPLE_RATE=1
 
