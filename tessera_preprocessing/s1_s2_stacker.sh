@@ -7,15 +7,23 @@
 # set -euo pipefail
 set -u
 
+# Resolve this script's own directory so the sibling s1_stack / s2_stack
+# binaries can be located regardless of where the script is invoked from
+# (no `cd` required).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 #######################################
 # USER CONFIGURABLE PARAMETERS
 #######################################
 
 # === Basic Configuration ===
-# BASE_DIR="/absolute/path/to/your/data_dir"
-BASE_DIR="/scratch/zf281/tessera/data/cambridge/output/2024"
-OUT_DIR="${BASE_DIR}/data_processed"
-DOWNSAMPLE_RATE=1
+ : "${BASE_DIR:=/absolute/path/to/your/data_dir}"
+#BASE_DIR="/scratch/zf281/tessera/data/cambridge/output/2024"
+ : "${S1_RAW_SUBDIR:=data_sar_raw}"      # S1 raw input subdir under BASE_DIR (matches the downloader output)
+ : "${S2_RAW_SUBDIR:=data_raw}"          # S2 raw input subdir under BASE_DIR (matches the downloader output)
+ : "${PROCESSED_SUBDIR:=data_processed}" # stacked output subdir under BASE_DIR
+OUT_DIR="${BASE_DIR}/${PROCESSED_SUBDIR}"
+ : "${DOWNSAMPLE_RATE:=1}"
 
 mkdir -p "$OUT_DIR"
 
@@ -38,8 +46,8 @@ OPTIONS:
     -r, --rate <rate>                Downsampling rate (e.g., 10 means take every 10th pixel) [default: 10]
 '
 
-./s1_stack \
-  --input-dir "${BASE_DIR}/data_sar_raw" \
+"$SCRIPT_DIR/s1_stack" \
+  --input-dir "${BASE_DIR}/${S1_RAW_SUBDIR}" \
   --output-dir $OUT_DIR \
   --parallel 16 \
   --rate $DOWNSAMPLE_RATE
@@ -65,8 +73,8 @@ OPTIONS:
     -r, --sample-rate <sample-rate>    Downsample rate (default=10) [default: 10]
 '
 
-./s2_stack \
-  --input "${BASE_DIR}/data_raw" \
+"$SCRIPT_DIR/s2_stack" \
+  --input "${BASE_DIR}/${S2_RAW_SUBDIR}" \
   --output $OUT_DIR \
   --batch-size 16 \
   --cache-level 1 \

@@ -7,6 +7,10 @@
 # set -euo pipefail
 set -u
 
+# Resolve this script's own directory so the sibling *.py processors can be
+# located regardless of where the script is invoked from (no `cd` required).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 #######################################
 # USER CONFIGURABLE PARAMETERS
 #######################################
@@ -48,7 +52,8 @@ S1_CHUNKSIZE=1024                  # S1 stackstac chunk size
 S1_ORBIT_STATE="both"              # Orbit state: ascending/descending/both
 S1_MIN_COVERAGE=0.01               # Minimum valid pixel coverage for S1 (%) set this to 0.01 to mitigate the tiling artefact!
 S1_RESOLUTION=$RESOLUTION          # S1 output resolution (meters)
-S1_OVERWRITE=true                  # Overwrite existing S1 files
+: "${S1_OVERWRITE:=true}"          # Overwrite existing S1 files
+
 
 # === Sentinel-2 Configuration ===
 S2_ENABLED=true                    # Enable S2 processing
@@ -59,7 +64,8 @@ S2_CHUNKSIZE=1024                  # S2 stackstac chunk size
 S2_MAX_CLOUD=100                   # Maximum cloud coverage for S2 (%) set this to 100 to mitigate the tiling artefact!
 S2_RESOLUTION=$RESOLUTION          # S2 output resolution (meters)
 S2_MIN_COVERAGE=0.01               # Minimum valid pixel coverage for S2 (%) set this to 0.01 to mitigate the tiling artefact!
-S2_OVERWRITE=true                  # Overwrite existing S2 files
+: "${S2_OVERWRITE:=true}"          # Overwrite existing S2 files
+
 
 # === System Configuration ===
 DEBUG=false                        # Enable debug mode
@@ -75,8 +81,10 @@ SCRIPT_START_TIME=$(date +%s)
 SCRIPT_NAME=$(basename "$0")
 LOG_DIR="${OUT_DIR}/logs"
 MAIN_LOG="${LOG_DIR}/tessera_processing_$(date +%Y%m%d_%H%M%S).log"
-S1_OUTPUT="${OUT_DIR}/data_sar_raw"
-S2_OUTPUT="${OUT_DIR}/data_raw"
+ : "${S1_RAW_SUBDIR:=data_sar_raw}"   # S1 raw output subdir under OUT_DIR (read by the stacker)
+ : "${S2_RAW_SUBDIR:=data_raw}"       # S2 raw output subdir under OUT_DIR (read by the stacker)
+S1_OUTPUT="${OUT_DIR}/${S1_RAW_SUBDIR}"
+S2_OUTPUT="${OUT_DIR}/${S2_RAW_SUBDIR}"
 
 # Color definitions
 RED='\033[0;31m'
@@ -325,7 +333,7 @@ process_sentinel1() {
         local debug_flag=""
         [[ "$DEBUG" == "true" ]] && debug_flag="--debug"
         
-        $PYTHON_ENV s1_fast_processor.py \
+        $PYTHON_ENV "$SCRIPT_DIR/s1_fast_processor.py" \
             --input_tiff "$INPUT_TIFF" \
             --start_date "$p_start" \
             --end_date "$p_end" \
@@ -410,7 +418,7 @@ process_sentinel2() {
         local s2_start="${p_start}T00:00:00"
         local s2_end="${p_end}T23:59:59"
         
-        $PYTHON_ENV s2_fast_processor.py \
+        $PYTHON_ENV "$SCRIPT_DIR/s2_fast_processor.py" \
             --input_tiff "$INPUT_TIFF" \
             --start_date "$s2_start" \
             --end_date "$s2_end" \
@@ -484,12 +492,12 @@ main() {
     fi
     
     # Check Python scripts
-    if [[ "$S1_ENABLED" == "true" && ! -f "s1_fast_processor.py" ]]; then
+    if [[ "$S1_ENABLED" == "true" && ! -f "$SCRIPT_DIR/s1_fast_processor.py" ]]; then
         log ERROR "S1 processor script not found: s1_fast_processor.py"
         exit 1
     fi
     
-    if [[ "$S2_ENABLED" == "true" && ! -f "s2_fast_processor.py" ]]; then
+    if [[ "$S2_ENABLED" == "true" && ! -f "$SCRIPT_DIR/s2_fast_processor.py" ]]; then
         log ERROR "S2 processor script not found: s2_fast_processor.py"
         exit 1
     fi

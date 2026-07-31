@@ -257,15 +257,25 @@ def shp_to_tiff(shp_path, tiff_path=None, pixel_size=100, force_crs=None):
     return tiff_path, hull_tiff_path
 
 def main():
-    """
-    Main function to run the conversion process.
-    """
-    # Input shapefile path
-    shp_path = 'absolute_path_to_your_shp_file'
+    import argparse
 
-    # Call the conversion function
+    parser = argparse.ArgumentParser(description='Convert a shapefile (.shp) to a TIFF raster ROI mask, automatically selecting the best UTM CRS')
+    parser.add_argument('--shp_path', required=True, help='Path to the input shapefile (.shp)')
+    parser.add_argument('--tiff_path', default=None, help='Path to the output TIFF (default: same name as the shapefile, same directory, .tiff extension)')
+    parser.add_argument('--pixel_size', type=float, default=10, help='Output pixel size in meters (default: 10)')
+    parser.add_argument('--force_crs', default=None, help='Force a specific target CRS, e.g. EPSG:32650 (default: auto-detect best UTM zone)')
+
+    args = parser.parse_args()
+
+    force_crs = CRS.from_user_input(args.force_crs) if args.force_crs else None
+
     try:
-        tiff_path, hull_tiff_path = shp_to_tiff(shp_path, pixel_size=10, force_crs=None)
+        tiff_path, hull_tiff_path = shp_to_tiff(
+            args.shp_path,
+            tiff_path=args.tiff_path,
+            pixel_size=args.pixel_size,
+            force_crs=force_crs,
+        )
         logger.info(f"Conversion complete!")
         logger.info(f"TIFF file saved at: {tiff_path}")
         logger.info(f"Convex hull TIFF saved at: {hull_tiff_path}")

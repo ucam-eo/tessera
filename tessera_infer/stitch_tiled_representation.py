@@ -41,7 +41,7 @@ def check_intersection(folder_info):
         'roi_height': roi_height,
     }
 
-def stitch_and_crop_representations(d_pixel_retiled_path, representation_retiled_path, downstream_tiff_path, out_dir):
+def stitch_and_crop_representations(d_pixel_retiled_path, representation_retiled_path, downstream_tiff_path, out_dir, out_name="stitched_representation"):
     """
     Optimized version: Stitch representation vectors and crop to the downstream TIFF extent.
     
@@ -242,7 +242,7 @@ def stitch_and_crop_representations(d_pixel_retiled_path, representation_retiled
     os.makedirs(out_dir, exist_ok=True)
     
     # Save as numpy file
-    out_path = os.path.join(out_dir, "stitched_representation.npy")
+    out_path = os.path.join(out_dir, f"{out_name}.npy")
     print(f"Saving to: {out_path}")
     np.save(out_path, target_array)
     
@@ -267,6 +267,7 @@ def main():
     parser.add_argument('--representation_retiled_path', required=True, help='Directory path containing representation vector npy files')
     parser.add_argument('--downstream_tiff', required=True, help='Path to the downstream TIFF file')
     parser.add_argument('--out_dir', required=True, help='Output directory')
+    parser.add_argument('--out_name', default='stitched_representation', help='Output .npy basename (no extension); convert_npy2tiff.py reuses it for the .tif')
     
     args = parser.parse_args()
     
@@ -274,7 +275,8 @@ def main():
         args.d_pixel_retiled_path,
         args.representation_retiled_path,
         args.downstream_tiff,
-        args.out_dir
+        args.out_dir,
+        args.out_name
     )
 
 if __name__ == "__main__":
