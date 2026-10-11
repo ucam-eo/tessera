@@ -917,52 +917,11 @@ def process_scl_assessment_and_generation(items, date_key, tpl, bbox_proj, mask_
     scl_dir.mkdir(parents=True, exist_ok=True)
     scl_out_path = scl_dir / f"{date_key}_mosaic.tiff"
 
-    # Check if valid SCL file already exists
+    # A saved SCL mosaic contains classes, not the source index for each pixel.
+    # Recompute selection from the source SCLs when a day needs processing;
+    # process_day already skips fully completed days and retains valid bands.
     if not overwrite and scl_out_path.exists():
-        if validate_tiff(scl_out_path, (tpl["height"], tpl["width"]), tpl["crs"], tpl["transform"]):
-            logging.info(f"[{partition_id}]   SCL file already exists and is valid, reading file to check validity...")
-            
-            # Read existing SCL file and analyze its content
-            try:
-                with rasterio.open(scl_out_path) as src:
-                    scl_data = src.read(1)
-                    # Check SCL value distribution - vectorized operation
-                    unique_values, unique_counts = np.unique(scl_data, return_counts=True)
-                    value_counts = dict(zip(unique_values, unique_counts))
-                    
-                    # Log SCL value distribution
-                    total_pixels = np.sum(mask_np)
-                    logging.info(f"[{partition_id}]   Existing SCL file value distribution statistics ({date_key}):")
-                    for val in sorted(value_counts.keys()):
-                        count = value_counts[val]
-                        desc = SCL_DESCRIPTIONS.get(val, "Unknown")
-                        percent = 100 * count / total_pixels if total_pixels > 0 else 0
-                        logging.info(f"[{partition_id}]     SCL value {val} ({desc}): {count} pixels ({percent:.2f}%)")
-                    
-                    # Check if only contains 0 and 4 (indicating old processing method) - vectorized check
-                    if set(unique_values) == {0, 4} and unique_values.size == 2:
-                        logging.warning(f"[{partition_id}]   Detected old version SCL file format (only contains 0 and 4), will regenerate")
-                        scl_out_path.unlink()
-                    else:
-                        # Calculate valid coverage (non-SCL_INVALID pixels) - vectorized calculation
-                        invalid_mask = np.isin(scl_data, list(SCL_INVALID - {np.nan}))
-                        valid_pixels = np.sum(~invalid_mask & (scl_data > 0))
-                        
-                        valid_pct = 100 * valid_pixels / total_pixels if total_pixels > 0 else 0
-                        logging.info(f"[{partition_id}]   Existing SCL file valid coverage: {valid_pct:.2f}%")
-                        
-                        # If coverage is sufficient, return success
-                        if valid_pct >= min_coverage:
-                            # Generate generic tile_selection for other bands
-                            # For existing SCL files, we assume all non-0 and non-invalid pixels have a valid tile
-                            tile_selection = np.where(~np.isin(scl_data, list(SCL_INVALID)) & (scl_data > 0), 0, -1)
-                            return True, valid_pct, tile_selection
-                        else:
-                            logging.warning(f"[{partition_id}]   Existing SCL file coverage insufficient ({valid_pct:.2f}% < {min_coverage}%), will regenerate")
-                            scl_out_path.unlink()
-            except Exception as e:
-                logging.warning(f"[{partition_id}]   Error analyzing existing SCL file: {e}, will regenerate")
-                scl_out_path.unlink()
+        logging.info(f"[{partition_id}]   Recomputing source selection from SCL assets for incomplete day")
 
     # Determine SCL asset key for this backend
     scl_asset_key = "scl" if BAND_MAPPING is AWS_BAND_MAPPING else "SCL"
