@@ -114,11 +114,9 @@ we do request it.
 
 ## Accessing Embeddings using GeoTessera (recommended)
 
-We have generated embeddings for the whole globe at 10m resolution for 2024.
-Additionally, for regions such as the United States and Europe, embeddings are available from 2017 to 2025.
+We have generated Tessera v1.1 embeddings for the whole globe at 10m resolution from 2017 to 2025.
 These can be downloaded and used for downstream applications, saving significant computational time and resources, using 
-the [GeoTessera](https://github.com/ucam-eo/geotessera) library. 
-We will progressively extending coverage backwards year by year until 2017.
+the [GeoTessera](https://github.com/ucam-eo/geotessera) or [tessera-embeddings](https://github.com/dClimate/tessera-embeddings) library. 
 If you find that your region does not have embeddings for a specific year, you can go to [here](https://github.com/ucam-eo/geotessera#request-missing-embeddings) to submit an embedding request.
 The current coverage map is below:
 
